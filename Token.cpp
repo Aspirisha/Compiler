@@ -48,7 +48,65 @@ bool Operator::isCharacterPossibleAfterToken(char c)
 
 bool ReservedWord::isCharacterPossibleAfterToken(char c)
 {
+  bool isOk = ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || (c >= '0' && c <= '9') || isspace(c));
 
+  switch (c)
+  {
+  case '+':
+  case '-':
+  case '!':
+  case '(':
+    isOk = true;
+    break;
+  }
+
+  return isOk;
 }
+
+bool OpenBracket::isCharacterPossibleAfterToken(char c)
+{
+  bool isOk = ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || (c >= '0' && c <= '9') || isspace(c));
+
+  switch (c)
+  {
+  case '+':
+  case '-':
+  case '(':
+    isOk = true;
+    break;
+  }
+
+  return isOk;
+}
+
+bool CloseBracket::isCharacterPossibleAfterToken(char c)
+{
+  bool isOk = ((c >= 'A' && c <= 'Z') || c == '_' || (c >= '0' && c <= '9') || isspace(c));
+
+  switch (c)
+  {
+  case '-':
+  case '+':
+  case '*':
+  case '/':
+  case '%':
+  case '<':
+  case '>':
+  case '=': // if it's ==
+  case '(':
+  case ']':
+  case '&':
+  case '!':
+  case '|':
+  case '^':
+  case ',':
+  case ';':
+    isOk = true;
+    break;
+  }
+
+  return isOk;
+}
+
 
 _LEX_END

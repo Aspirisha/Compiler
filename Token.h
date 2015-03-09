@@ -69,7 +69,12 @@ struct Operator : Token
   static bool isCharacterPossibleAfterToken(char c);
 };
 
-struct Punctuation : Token
+struct OpenBracket : Token
+{
+  static bool isCharacterPossibleAfterToken(char c);
+};
+
+struct CloseBracket : Token
 {
   static bool isCharacterPossibleAfterToken(char c);
 };
