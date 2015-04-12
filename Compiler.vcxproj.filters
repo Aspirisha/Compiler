@@ -19,6 +19,9 @@
     <Filter Include="SymbolTable">
       <UniqueIdentifier>{36ca52c4-50f5-4d54-9a7a-fb4a4b3e84eb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Syntax">
+      <UniqueIdentifier>{15c2495d-fe90-4e4d-83f6-9f088fccdfdf}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="lexer.cpp">
@@ -28,6 +31,9 @@
       <Filter>Lexer\Source Files</Filter>
     </ClCompile>
     <ClCompile Include="driver.cpp" />
+    <ClCompile Include="SymbolTable.cpp">
+      <Filter>SymbolTable</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Lexer.h">
@@ -41,6 +47,9 @@
     </ClInclude>
     <ClInclude Include="Lexer.hpp">
       <Filter>Lexer\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Syntax.h">
+      <Filter>Syntax</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

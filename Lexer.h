@@ -11,6 +11,7 @@ enum LexerState
 {
   PARSING,
   WRONG_FILE,
+  SYNTAX_ERROR,
   FINISHED
 };
 
@@ -35,7 +36,7 @@ private:
   std::string s;
   size_t currentIndex;
   size_t currentLine;
-  SymbolTable currentTable;
+  SymbolTable *currentTable;
   LexerState state;
   LexemeStart *lexemeStart; 
 
@@ -43,7 +44,6 @@ private:
   TokenData * onEndMatch(Token * token = nullptr);
 
   Token *onErrorToken();
-  Token *onReturnToken(TokenData *data);
 
   void skipSpaces();
   int getSign();
@@ -54,6 +54,7 @@ private:
   TokenData *getBooleanData();
 
   TokenData *getIdentifierToken();
+  TokenData *getKeyWord();
 
   TokenData *getAssignmentToken();
   TokenData *getLogicNotToken();
@@ -88,7 +89,7 @@ struct TokenData
   {
     Token *temp = token;
     token = nullptr;
-    return token;
+    return temp;
   }
 
   bool hasNullToken() { return token == nullptr; }

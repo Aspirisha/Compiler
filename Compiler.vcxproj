@@ -70,12 +70,14 @@
   <ItemGroup>
     <ClCompile Include="driver.cpp" />
     <ClCompile Include="lexer.cpp" />
+    <ClCompile Include="SymbolTable.cpp" />
     <ClCompile Include="Token.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Lexer.h" />
     <ClInclude Include="Lexer.hpp" />
     <ClInclude Include="SymbolTable.h" />
+    <ClInclude Include="Syntax.h" />
     <ClInclude Include="Token.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -5,7 +5,10 @@
 #define _LEX_BEGIN namespace lex {
 #define _LEX_END }
 
+class SymbolTable;
+
 _LEX_BEGIN
+
 
 enum TokenType
 {
@@ -17,15 +20,9 @@ enum TokenType
 
   // identifier
   IDENTIFIER,
-
+  RESERVED,
   // reserved words
-  IF,
-  ELIF,
-  ELSE,
-  WHILE,
-  FOR,
-  BEGIN,
-  END,
+
   
   // operators
   COMPARISON,     // <, <=, >, >=, ==, !=
@@ -49,17 +46,14 @@ enum TokenType
 
 struct Token
 {
+  Token() : lineNumber(1) {}
   virtual TokenType getType() = 0;
   static bool isCharacterPossibleAfterToken(char c);
   virtual ~Token() {};
+  int lineNumber;
 };
 
 struct Operand : Token
-{
-  static bool isCharacterPossibleAfterToken(char c);
-};
-
-struct ReservedWord : Token
 {
   static bool isCharacterPossibleAfterToken(char c);
 };
@@ -79,6 +73,27 @@ struct CloseBracket : Token
   static bool isCharacterPossibleAfterToken(char c);
 };
 
+
+struct ReservedWord : Token
+{
+  enum ReservedType
+  {
+    IF,
+    ELIF,
+    ELSE,
+    WHILE,
+    FOR,
+    BEGIN,
+    END,
+  };
+
+  ReservedWord(ReservedType t) : type(t) {}
+  static bool isCharacterPossibleAfterToken(char c);
+
+  TokenType getType() { return TokenType::RESERVED; }
+
+  ReservedType type;
+};
 
 struct Integer : Operand
 {
@@ -118,10 +133,11 @@ struct Boolean : Operand
 
 struct Identifier : Operand
 {
-  Identifier(size_t v) : indexInSymTable(v) {}
+  Identifier(size_t v, SymbolTable *symTable) : indexInSymTable(v), mySymTable(symTable) {}
 
   TokenType getType() { return TokenType::IDENTIFIER; }
   size_t indexInSymTable;
+  SymbolTable *mySymTable;
 };
 
 struct Comparison : Operator
@@ -231,7 +247,7 @@ public:
   CharToDigit();
   int getDigit(char c) const
   {
-    if (charToDigit.find(c) != charToDigit.end()) 
+    if (charToDigit.find(c) == charToDigit.end()) 
       return -1;
     return charToDigit[c];
   }

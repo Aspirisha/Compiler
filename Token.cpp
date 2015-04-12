@@ -34,6 +34,7 @@ bool Operand::isCharacterPossibleAfterToken(char c)
   case '^':
   case ',':
   case ';':
+  case 0:
     isOk = true;
     break;
   }

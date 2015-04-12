@@ -23,6 +23,7 @@ int find_match_offset(std::string const& string_to_search, boost::regex const& e
 Lexer::Lexer(const char *fileName) : currentLine(1)
 {
   lexemeStart = new LexemeStart;
+  currentTable = new SymbolTable;
   readFile(fileName);
 }
 
@@ -66,51 +67,92 @@ int Lexer::getSign()
   }
 }
 
+Token *deattachToken(TokenData * d)
+{
+  Token * token = d->deattachToken();
+  delete d;
+  return token;
+}
+
 Token *Lexer::getNextToken()
 {
   skipSpaces();
+  if (state == FINISHED)
+    return nullptr;
 
-  Token *token = nullptr;
-
+  TokenData *data = nullptr;
   if (s[currentIndex] == '<' || s[currentIndex] == '>')
   {
-    TokenData *comparison = getComparisonToken();
-    if (!comparison->hasNullToken())
-    {
-      token = comparison->deattachToken();
-      delete comparison;
-      return token;
-    }
-    delete comparison;
+    data = getComparisonToken();
+    if (!data->hasNullToken())
+      return (deattachToken(data));
+    delete data;
     
-    TokenData *shift = getShiftToken();
-    if (!shift->hasNullToken())
-    {
-      token = shift->deattachToken();
-      delete shift;
-      return token;
-    }
-    delete shift;
+    data = getShiftToken();
+    if (!data->hasNullToken())
+      return (deattachToken(data));
+    delete data;
 
     return onErrorToken();
   }
 
   if (s[currentIndex] >= '0' && s[currentIndex] <= '9')
   {
-    TokenData *integer = getIntegerToken();
-    if (!integer->hasNullToken())
-    {
-      token = integer->deattachToken();
-      delete integer;
-      return token;
-    }
-    delete integer;
+    data = getIntegerToken();
+    if (!data->hasNullToken())
+      return (deattachToken(data));
+    delete data;
 
-    TokenData *floating = getFloatToken(); // add flags like f to determine floats
-
+    data = getFloatToken(); // add flags like f to determine floats
+    if (!data->hasNullToken())
+      return (deattachToken(data));
+    delete data;
   }
+ 
+  data = getArithmeticToken();
+  if (!data->hasNullToken())
+    return (deattachToken(data));
+  delete data;
 
-  
+  data = getLogicBinaryToken();
+  if (!data->hasNullToken())
+    return (deattachToken(data));
+  delete data;
+
+  data = getBitwiseBinaryToken();
+  if (!data->hasNullToken())
+    return (deattachToken(data));
+  delete data;
+
+  data = getLogicNotToken();
+  if (!data->hasNullToken())
+    return (deattachToken(data));
+  delete data;
+
+  data = getBitwiseNotToken();
+  if (!data->hasNullToken())
+    return (deattachToken(data));
+  delete data;
+
+  data = getBooleanData();
+  if (!data->hasNullToken())
+    return (deattachToken(data));
+  delete data;
+
+  data = getAssignmentToken();
+  if (!data->hasNullToken())
+    return (deattachToken(data));
+  delete data;
+
+  data = getLiteralToken();
+  if (!data->hasNullToken())
+    return (deattachToken(data));
+  delete data;
+
+  data = getIdentifierToken();
+  if (!data->hasNullToken())
+    return (deattachToken(data));
+  delete data;
 
   return nullptr;
 }
@@ -133,16 +175,24 @@ void Lexer::skipSpaces()
         isMultilineComment = false;
       break;
     case '*':
-      if (prevSymbol == '/' && !isSingleLineComment && !isMultilineComment)
+      if (!isSingleLineComment && !isMultilineComment)
+      {
+        if (prevSymbol != '/')
+          return;
         isMultilineComment = true;
+      }
       break;
     case '\n':
       currentLine++;
+      isSingleLineComment = false;
       break;
     case ' ':
     case '\t':
     case '\r':
       break;
+    case 0:
+      state = FINISHED;
+      return;
     default:
       if (isSingleLineComment || isMultilineComment)
         break;
@@ -160,7 +210,8 @@ void Lexer::onStartMatch()
 TokenData * Lexer::onEndMatch(Token *token)
 {
   size_t endIndex = currentIndex;
-  currentIndex = lexemeStart->pos.back();
+  if (token == nullptr)
+    currentIndex = lexemeStart->pos.back();
   lexemeStart->pos.pop_back();
   return new TokenData(token, endIndex - currentIndex);
 }
@@ -216,7 +267,7 @@ TokenData *Lexer::getIntegerToken()
 
   while (true)
   {
-    int digit = charToDigit.getDigit(s[currentIndex++]);
+    int digit = charToDigit.getDigit(s[currentIndex]);
     if (digit == -1)  // number is read
       break;
     
@@ -225,6 +276,7 @@ TokenData *Lexer::getIntegerToken()
 
     num *= base;
     num += digit;
+    currentIndex++;
   }
 
   if (!Integer::isCharacterPossibleAfterToken(s[currentIndex]))
@@ -264,10 +316,12 @@ TokenData *Lexer::getFloatToken()
         if (dotFound)
           return onEndMatch();
         dotFound = true;
-        break;
+        continue;
+      default:
+        return onEndMatch(new Float(num));
       }
     }
-    
+
     if (digit >= base) // can't be if it's not an error
     {
       if (digit != 0xe)
@@ -551,33 +605,58 @@ TokenData *Lexer::getBooleanData()
   return onEndMatch(new Boolean(value));
 }
 
+/*TokenData *Lexer::getKeyWord()
+{
+  static const boost::regex e("^begin\\s");
+  onStartMatch();
+}*/
+
 TokenData *Lexer::getIdentifierToken()
 {
-  static const boost::regex e("^[a-zA-Z_][a-zA-Z0-9_]*[\\Qs]|^)\\E+-*/%!=<>&;,].*");
+  static const boost::regex e("^([a-zA-Z_][a-zA-Z0-9_]*).*");
   onStartMatch();
 
   boost::match_results<const char *> results;
   if (boost::regex_match(s.c_str() + currentIndex, results, e))
   {
-    int len = results.length();
+    std::string name = results[1];
+    int len = name.length();
     currentIndex += len;
 
-    SymbolData data();
-    std::string name = s.substr(currentIndex, len);
-    int index = currentTable.put(SymbolData(DataType::UNKNOWN, name));
-    if (index != -1)
-      return onEndMatch();
-
-    return onEndMatch(new Identifier(index));
+    SymbolData data;
+    
+    int index = currentTable->put(SymbolData(DataType::UNKNOWN, name));
+    
+    if (index == -1) // means it is reserved word
+    {
+      if (!name.compare("if"))
+        return onEndMatch(new ReservedWord(ReservedWord::ReservedType::IF));
+      if (!name.compare("elif"))
+        return onEndMatch(new ReservedWord(ReservedWord::ReservedType::ELIF));
+      if (!name.compare("else"))
+        return onEndMatch(new ReservedWord(ReservedWord::ReservedType::ELSE));
+      if (!name.compare("while"))
+        return onEndMatch(new ReservedWord(ReservedWord::ReservedType::WHILE));
+      if (!name.compare("for"))
+        return onEndMatch(new ReservedWord(ReservedWord::ReservedType::FOR));
+      if (!name.compare("begin"))
+      {
+        currentTable = new SymbolTable(currentTable);
+        return onEndMatch(new ReservedWord(ReservedWord::ReservedType::BEGIN));
+      }
+      if (!name.compare("end"))
+      {
+        currentTable = currentTable->getParent();
+        if (currentTable == nullptr)
+        {
+          state = LexerState::SYNTAX_ERROR;
+          return onEndMatch();
+        }
+        return onEndMatch(new ReservedWord(ReservedWord::ReservedType::END));
+      }
+    }
+    return onEndMatch(new Identifier(index, currentTable));
   }
   return onEndMatch();
 }
-
-Token *Lexer::onReturnToken(TokenData *data)
-{
-  Token *token = data->deattachToken();
-  delete data;
-  return token;
-}
-
 _LEX_END
